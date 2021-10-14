@@ -1,5 +1,4 @@
 use chrono::{DateTime, Duration, Utc};
-use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -8,6 +7,8 @@ use std::{
         Arc, RwLock,
     },
 };
+
+use crate::util::{generate_cookie, get_id_from_cookie};
 
 /// # The main session type.
 ///
@@ -86,13 +87,6 @@ impl Default for Session {
     }
 }
 
-/// generates a random cookie value
-fn generate_cookie(len: usize) -> String {
-    let mut key = vec![0u8; len];
-    rand::thread_rng().fill_bytes(&mut key);
-    base64::encode(key)
-}
-
 impl Session {
     /// Create a new session. Generates a random id and matching
     /// cookie value. Does not set an expiry by default
@@ -107,7 +101,7 @@ impl Session {
     /// assert!(session.into_cookie_value().is_some());
     /// # Ok(()) }) }
     pub fn new() -> Self {
-        let cookie_value = generate_cookie(64);
+        let cookie_value = generate_cookie::<64>();
         let id = Session::id_from_cookie_value(&cookie_value).unwrap();
 
         Self {
@@ -136,10 +130,8 @@ impl Session {
     /// assert_eq!(id, Session::id_from_cookie_value(&cookie_value)?);
     /// # Ok(()) }) }
     /// ```
-    pub fn id_from_cookie_value(string: &str) -> Result<String, base64::DecodeError> {
-        let decoded = base64::decode(string)?;
-        let hash = blake3::hash(&decoded);
-        Ok(base64::encode(&hash.as_bytes()))
+    pub fn id_from_cookie_value(cookie_value: &str) -> Result<String, base64::DecodeError> {
+        get_id_from_cookie(cookie_value)
     }
 
     /// mark this session for destruction. the actual session record
@@ -300,6 +292,11 @@ impl Session {
         data.len()
     }
 
+    /// returns true if the session has length 0
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Generates a new id and cookie for this session
     ///
     /// # Example
@@ -317,7 +314,7 @@ impl Session {
     /// # Ok(()) }) }
     /// ```
     pub fn regenerate(&mut self) {
-        let cookie_value = generate_cookie(64);
+        let cookie_value = generate_cookie::<64>();
         self.id = Session::id_from_cookie_value(&cookie_value).unwrap();
         self.cookie_value = Some(cookie_value);
     }

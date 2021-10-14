@@ -1,4 +1,5 @@
-use crate::{async_trait, Result, Session, SessionStore};
+use crate::{Result, Session, SessionStore};
+use async_trait::async_trait;
 
 /// A session store that serializes the entire session into a Cookie.
 ///
